@@ -127,9 +127,9 @@ public:
 
     /// Constructors
 
-    explicit NOTE(const std::string& INPUT_NOTE, const float&);
+    explicit NOTE(const std::string&, const float&);
 
-    explicit NOTE(float INPUT_GZ, float time_ = 1.f) : GZ(INPUT_GZ), time(time_) {}
+    explicit NOTE(const float& INPUT_GZ, const float& time_ = 1.f) : GZ(INPUT_GZ), time(time_) {}
 
     /// Operators
 
@@ -137,7 +137,7 @@ public:
 
     /// Playing
 
-    void Play_Note(const float& speed = 1.f) const noexcept;
+    void Play_Note(const float&) const noexcept;
 
     /// Getters
 
@@ -154,7 +154,7 @@ private:
 
 // NOTE private
 
-void NOTE::_Play_Note(const float &frequency, const float &time = 0.2f) noexcept {
+void NOTE::_Play_Note(const float& frequency, const float& time = 0.2f) noexcept {
     std::string str;
     str += "(speaker-test -t sine -f ";
     str += std::to_string(frequency);
@@ -335,11 +335,11 @@ MELODY::MELODY(const std::string &INPUT_MELODY) {
 }
 
 void MELODY::Add_Melody(const std::string &INPUT_MELODY) noexcept {
-    for (int it = 0; it < INPUT_MELODY.size(); ++it) {
+    for (int32_t it = 0; it < INPUT_MELODY.size(); ++it) {
         std::vector<std::string> add_notes;
         std::string add_time;
         float new_time;
-        int copy_it = it;
+        int32_t copy_it = it;
         if (INPUT_MELODY[copy_it] == '{') { // accord
             ++copy_it;
             add_notes = Find_Accords(INPUT_MELODY, copy_it);
@@ -454,7 +454,7 @@ void MELODY::Melody_Octava_Up() noexcept {
 }
 
 void MELODY::Play_Melody(const float &speed) {
-    for (int it = 0; it < _note_melody.size(); ++it) {
+    for (int32_t it = 0; it < _note_melody.size(); ++it) {
         Play_Accord(it, speed);
     }
 }
