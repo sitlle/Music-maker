@@ -115,247 +115,200 @@ void Build_notes() noexcept {
     notes["Bd4"] = notes["Bd3"] * 2;
 }
 
+// Class NOTE
 
 class NOTE {
 public:
+
+    /// Default constructor and destructor
+
     NOTE() = default;
     ~NOTE() = default;
 
-    explicit NOTE(std::string INPUT_NOTE, float time_ = 1.f) {
-        if (notes.find(INPUT_NOTE) != notes.end()) {
-            GZ = notes[INPUT_NOTE];
-            time = time_;
-        } else {
-            throw std::invalid_argument("Cant find");
-        }
-    }
+    /// Constructors
 
-    NOTE& operator=(std::string INPUT_NOTE) {
-        GZ = notes[INPUT_NOTE];
-        time = 1.f;
-        return *this;
-    }
+    explicit NOTE(const std::string& INPUT_NOTE, const float&);
 
     explicit NOTE(float INPUT_GZ, float time_ = 1.f) : GZ(INPUT_GZ), time(time_) {}
-    
-    void Play_Note(float speed = 1.f) const noexcept {
-        Beep(GZ, time / speed);
-    }
 
-    float& Get_GZ() {
-        return GZ;
-    }
+    /// Operators
 
-    float& Get_time() {
-        return time;
-    }
+    NOTE& operator=(const std::string&) noexcept;
+
+    /// Playing
+
+    void Play_Note(const float& speed = 1.f) const noexcept;
+
+    /// Getters
+
+    float& Get_GZ() noexcept;
+
+    float& Get_time() noexcept;
 
 private:
     float GZ = 0.f;
     float time = 1.f;
 
-    static void Beep(float frequency, float time = 0.2) noexcept {
-        std::string str;
-        str += "(speaker-test -t sine -f ";
-        str += std::to_string(frequency);
-        str += ")& pid=$!; sleep ";
-        str += std::to_string(time);
-        str += "s; kill -9 $pid";
-        const char *command;
-        command = str.c_str();
-        system(command);
-        std::cout << "---------------------------------------\n";
-    }
+    static void _Play_Note(const float&, const float&) noexcept;
 };
+
+// NOTE private
+
+void NOTE::_Play_Note(const float &frequency, const float &time = 0.2f) noexcept {
+    std::string str;
+    str += "(speaker-test -t sine -f ";
+    str += std::to_string(frequency);
+    str += ")& pid=$!; sleep ";
+    str += std::to_string(time);
+    str += "s; kill -9 $pid";
+    const char *command;
+    command = str.c_str();
+    system(command);
+    std::cout << "---------------------------------------\n";
+}
+
+// NOTE public
+
+NOTE::NOTE(const std::string& INPUT_NOTE, const float& time_ = 1.f) {
+    if (notes.find(INPUT_NOTE) != notes.end()) {
+        GZ = notes[INPUT_NOTE];
+        time = time_;
+    } else {
+        std::string error = "Can't find ";
+        error += INPUT_NOTE;
+        throw std::invalid_argument(error);
+    }
+}
+
+NOTE& NOTE::operator=(const std::string &INPUT_NOTE) noexcept {
+    GZ = notes[INPUT_NOTE];
+    time = 1.f;
+    return *this;
+}
+
+void NOTE::Play_Note(const float& speed) const noexcept {
+    _Play_Note(GZ, time / speed);
+}
+
+float& NOTE::Get_GZ() noexcept {
+    return GZ;
+}
+
+float& NOTE::Get_time() noexcept {
+    return time;
+}
+
+// Class ACCORD
 
 class ACCORD {
 public:
     std::vector<NOTE> accord;
 
+    /// Default constructor and destructor
+
     ACCORD() = default;
     ~ACCORD() = default;
 
+    /// Constructor
+
     explicit ACCORD(float time) : _time(time) {}
 
-    void Add_Note(NOTE input_note) {
-        accord.push_back(input_note);
-    }
+    /// Adders
 
-    void Add_Note(const std::string& input_note) {
-        NOTE add_note;
-        if (notes.find(input_note) != notes.end()) {
-            add_note.Get_GZ() = notes[input_note];
-        } else {
-            throw std::invalid_argument("Cant find");
-        }
-        add_note.Get_time() = _time;
-        accord.push_back(add_note);
-    }
+    void Add_Note(const NOTE&) noexcept;
 
-    void Play_Accord(float speed = 1.f) {
-        if (accord.size() == 1 && accord[0].Get_GZ() == 0) { // pause
-            int32_t TM = accord[0].Get_time() / 2.f * std::pow(10, 6);
-            std::cout << TM << '\n';
-            usleep(TM);
-            return;
-        }
-        std::vector<std::thread> threads;
-        for (auto& note : accord) {
-            NOTE copy_of_note = note;
-            threads.emplace_back([copy_of_note, &speed] {
-                copy_of_note.Play_Note(speed);
-            });
-        }
-        for (auto &thread : threads) {
-            thread.join();
-        }
-    }
+    void Add_Note(const std::string& input_note);
+
+    /// Playing
+
+    void Play_Accord(const float& speed = 1.f) noexcept;
+
 private:
     float _time = 1.f;
 };
 
+// ACCORD public
+
+void ACCORD::Add_Note(const NOTE &input_note) noexcept {
+    accord.push_back(input_note);
+}
+
+void ACCORD::Add_Note(const std::string &input_note) {
+    NOTE add_note;
+    if (notes.find(input_note) != notes.end()) {
+        add_note.Get_GZ() = notes[input_note];
+    } else {
+        std::string error = "Can't find";
+        error += input_note;
+        throw std::invalid_argument(error);
+    }
+    add_note.Get_time() = _time;
+    accord.push_back(add_note);
+}
+
+void ACCORD::Play_Accord(const float &speed) noexcept {
+    if (accord.size() == 1 && accord[0].Get_GZ() == 0) { // pause
+        int32_t TM = accord[0].Get_time() / 2.f * std::pow(10, 6);
+        // std::cout << TM << '\n';
+        usleep(TM);
+        return;
+    }
+    std::vector<std::thread> threads;
+    for (auto& note : accord) {
+        NOTE copy_of_note = note;
+        threads.emplace_back([copy_of_note, &speed] {
+            copy_of_note.Play_Note(speed);
+        });
+    }
+    for (auto &thread : threads) {
+        thread.join();
+    }
+}
+
+// Class MELODY
+
 class MELODY {
 public:
+
+    /// Default constructor and destructor
+
     MELODY() {
         Build_notes();
     }
+
     ~MELODY() = default;
 
-    explicit MELODY(const std::string& INPUT_MELODY) {
-        Build_notes();
-        Add_Melody(INPUT_MELODY);
-    }
+    /// Constructor
 
-    void Add_Melody(const std::string& INPUT_MELODY) {
-        for (int it = 0; it < INPUT_MELODY.size(); ++it) {
-            std::vector<std::string> add_notes;
-            std::string add_time;
-            float new_time;
-            int copy_it = it;
-            if (INPUT_MELODY[copy_it] == '{') { // accord
-                ++copy_it;
-                add_notes = Find_Accords(INPUT_MELODY, copy_it);
-                if (copy_it < INPUT_MELODY.size()) {
-                    if (INPUT_MELODY[copy_it] == '[') {
-                        ++copy_it;
-                        while (copy_it < INPUT_MELODY.size() &&
-                               INPUT_MELODY[copy_it] != ']') {
-                            add_time += INPUT_MELODY[copy_it];
-                            ++copy_it;
-                        }
-                    }
-                }
-            } else if (INPUT_MELODY[copy_it] == '(') { // pause
-                ++copy_it;
-                while (copy_it < INPUT_MELODY.size() &&
-                       INPUT_MELODY[copy_it] != ')') {
-                    add_time += INPUT_MELODY[copy_it];
-                    ++copy_it;
-                }
-            } else if (Is_Note(INPUT_MELODY[copy_it])) { // one note
-                std::string add_note;
-                while (copy_it < INPUT_MELODY.size() &&
-                       Is_Note(INPUT_MELODY[copy_it])) {
-                    add_note += INPUT_MELODY[copy_it];
-                    ++copy_it;
-                }
-                if (copy_it < INPUT_MELODY.size() &&
-                    INPUT_MELODY[copy_it] == '[') {
-                    ++copy_it;
-                    while (copy_it < INPUT_MELODY.size() &&
-                           INPUT_MELODY[copy_it] != ']') { // add time
-                        add_time +=  INPUT_MELODY[copy_it];
-                        ++copy_it;
-                    }
-                }
-                add_notes.push_back(add_note);
-            } else {
-                continue;
-            }
-            it = copy_it;
-            if (add_time.empty()) {
-                new_time = 1.f;
-            } else {
-                new_time = std::stof(add_time);
-            }
-            if (add_notes.empty() && !add_time.empty()) {
-                add_notes.emplace_back("123456789");
-                Add_Accord(add_notes, new_time);
-            } else if (add_notes.empty() && add_time.empty()) {
-                continue;
-            }
-            else {
-                Add_Accord(add_notes, new_time);
-            }
-        }
-    }
+    explicit MELODY(const std::string&);
 
-    std::vector<std::string> Find_Accords(const std::string& INPUT_MELODY, int32_t& it) noexcept {
-        std::vector<std::string> res;
-        while (it < INPUT_MELODY.size() && INPUT_MELODY[it] != '}') {
-            std::string add_note;
-            while (it < INPUT_MELODY.size() &&
-                   Is_Note(INPUT_MELODY[it])) {
-                add_note += INPUT_MELODY[it];
-                ++it;
-            }
-            if (!add_note.empty()) {
-                res.push_back(add_note);
-            }
-            if (INPUT_MELODY[it] == '}') {
-                ++it;
-                break;
-            }
-            ++it;
-        }
-        return res;
-    }
+    /// Adders
 
-    void Add_Accord(std::vector<std::string>& NOTE_NAMES, float add_time = 1.f) {
-        ACCORD new_accord;
-        for (auto &note : NOTE_NAMES) {
-            if (notes.find(note) != notes.end()) {
-                NOTE new_note;
-                new_note.Get_GZ() = notes[note];
-                new_note.Get_time() = add_time;
-                new_accord.Add_Note(new_note);
-            } else if (note == "123456789") {
-                NOTE new_note;
-                new_note.Get_GZ() = 0;
-                new_note.Get_time() = add_time;
-                new_accord.Add_Note(new_note);
-            } else {
-                throw std::invalid_argument("Cant find");
-            }
-        }
-        _note_melody.push_back(new_accord);
-    }
+    void Add_Melody(const std::string&) noexcept;
 
-    void Play_Melody(float speed = 1.f) {
-        for (int it = 0; it < _note_melody.size(); ++it) {
-            Play_Accord(it, speed);
-        }
-    }
+    void Add_Accord(std::vector<std::string>&, const float&);
 
-    void Melody_Octava_Down() {
-        for (auto &note : _note_melody) {
-            note.accord[0].Get_GZ() = note.accord[0].Get_GZ() / 2;
-        }
-    }
+    std::vector<std::string> Find_Accords(const std::string&, int32_t&) noexcept;
 
-    void Melody_Octava_Up() {
-        for (auto &note : _note_melody) {
-            note.accord[0].Get_GZ() = note.accord[0].Get_GZ() * 2;
-        }
-    }
+    /// Playing
+
+    void Play_Melody(const float& speed = 1.f);
+
+    /// Melody modification
+
+    void Melody_Octava_Down() noexcept;
+
+    void Melody_Octava_Up() noexcept;
 
 private:
     std::vector<ACCORD> _note_melody;
 
-    void Play_Accord(int32_t, float);
+    void Play_Accord(const int32_t&, const float&);
 
     static bool Is_Note(char) noexcept;
 };
+
+// MELODY private
 
 bool MELODY::Is_Note(char symbol) noexcept {
     if (symbol >= 'a' && symbol <= 'z' ||
@@ -366,11 +319,143 @@ bool MELODY::Is_Note(char symbol) noexcept {
     return false;
 }
 
-void MELODY::Play_Accord(int32_t position, float speed = 1.f) {
+void MELODY::Play_Accord(const int32_t& position, const float& speed = 1.f) {
     if (position >= 0 && position <= _note_melody.size() - 1) {
         _note_melody[position].Play_Accord(speed);
     } else {
         throw std::out_of_range("Out of range");
+    }
+}
+
+// MELODY public
+
+MELODY::MELODY(const std::string &INPUT_MELODY) {
+    Build_notes();
+    Add_Melody(INPUT_MELODY);
+}
+
+void MELODY::Add_Melody(const std::string &INPUT_MELODY) noexcept {
+    for (int it = 0; it < INPUT_MELODY.size(); ++it) {
+        std::vector<std::string> add_notes;
+        std::string add_time;
+        float new_time;
+        int copy_it = it;
+        if (INPUT_MELODY[copy_it] == '{') { // accord
+            ++copy_it;
+            add_notes = Find_Accords(INPUT_MELODY, copy_it);
+            if (copy_it < INPUT_MELODY.size()) {
+                if (INPUT_MELODY[copy_it] == '[') {
+                    ++copy_it;
+                    while (copy_it < INPUT_MELODY.size() &&
+                           INPUT_MELODY[copy_it] != ']') {
+                        add_time += INPUT_MELODY[copy_it];
+                        ++copy_it;
+                    }
+                }
+            }
+        } else if (INPUT_MELODY[copy_it] == '(') { // pause
+            ++copy_it;
+            while (copy_it < INPUT_MELODY.size() &&
+                   INPUT_MELODY[copy_it] != ')') {
+                add_time += INPUT_MELODY[copy_it];
+                ++copy_it;
+            }
+        } else if (Is_Note(INPUT_MELODY[copy_it])) { // one note
+            std::string add_note;
+            while (copy_it < INPUT_MELODY.size() &&
+                   Is_Note(INPUT_MELODY[copy_it])) {
+                add_note += INPUT_MELODY[copy_it];
+                ++copy_it;
+            }
+            if (copy_it < INPUT_MELODY.size() &&
+                INPUT_MELODY[copy_it] == '[') {
+                ++copy_it;
+                while (copy_it < INPUT_MELODY.size() &&
+                       INPUT_MELODY[copy_it] != ']') { // add time
+                    add_time +=  INPUT_MELODY[copy_it];
+                    ++copy_it;
+                }
+            }
+            add_notes.push_back(add_note);
+        } else {
+            continue;
+        }
+        it = copy_it;
+        if (add_time.empty()) {
+            new_time = 1.f;
+        } else {
+            new_time = std::stof(add_time);
+        }
+        if (add_notes.empty() && !add_time.empty()) {
+            add_notes.emplace_back("123456789");
+            Add_Accord(add_notes, new_time);
+        } else if (add_notes.empty() && add_time.empty()) {
+            continue;
+        }
+        else {
+            Add_Accord(add_notes, new_time);
+        }
+    }
+}
+
+std::vector<std::string> MELODY::Find_Accords(const std::string &INPUT_MELODY, int32_t &it) noexcept {
+    std::vector<std::string> res;
+    while (it < INPUT_MELODY.size() && INPUT_MELODY[it] != '}') {
+        std::string add_note;
+        while (it < INPUT_MELODY.size() &&
+               Is_Note(INPUT_MELODY[it])) {
+            add_note += INPUT_MELODY[it];
+            ++it;
+        }
+        if (!add_note.empty()) {
+            res.push_back(add_note);
+        }
+        if (INPUT_MELODY[it] == '}') {
+            ++it;
+            break;
+        }
+        ++it;
+    }
+    return res;
+}
+
+void MELODY::Add_Accord(std::vector<std::string> &NOTE_NAMES, const float& add_time = 1.f) {
+    ACCORD new_accord;
+    for (auto &note : NOTE_NAMES) {
+        if (notes.find(note) != notes.end()) {
+            NOTE new_note;
+            new_note.Get_GZ() = notes[note];
+            new_note.Get_time() = add_time;
+            new_accord.Add_Note(new_note);
+        } else if (note == "123456789") {
+            NOTE new_note;
+            new_note.Get_GZ() = 0;
+            new_note.Get_time() = add_time;
+            new_accord.Add_Note(new_note);
+        } else {
+            std::string error = "Can't find ";
+            error += note;
+            throw std::invalid_argument(error);
+        }
+    }
+    _note_melody.push_back(new_accord);
+}
+
+void MELODY::Melody_Octava_Down() noexcept {
+    for (auto &note : _note_melody) {
+        note.accord[0].Get_GZ() = note.accord[0].Get_GZ() / 2;
+    }
+}
+
+void MELODY::Melody_Octava_Up() noexcept {
+    for (auto &note : _note_melody) {
+        note.accord[0].Get_GZ() = note.accord[0].Get_GZ() * 2;
+    }
+}
+
+void MELODY::Play_Melody(const float &speed) {
+    for (int it = 0; it < _note_melody.size(); ++it) {
+        Play_Accord(it, speed);
     }
 }
 
@@ -422,7 +507,7 @@ void solve() {
             "A1[0.25] Bb1[0.25] (0.25) G1[0.25] (0.5) A2[0.5]"
             "Bb2[0.75] Bb2[0.75] Bb2[0.5] (1) Bb2[0.5] D3[0.5]"
             "D3[0.75] C3[0.5] C3[0.5] (1.5) Bb2[0.5]"
-            "C3[0.75] Bb2[0.75] A2[1] F2[1] D2[0.5]";
+            "C3[0.75] Bb2[0.75] A2[1] F2[1] D2[0.5] D2[2]";
 
     std::string input_left_hand_melody =
             "(1)"
@@ -461,24 +546,17 @@ void solve() {
             "Eb0[0.25] Eb1[0.25] Eb0[0.25] Eb1[0.25] Eb0[0.25] Eb1[0.25] Eb0[0.25] Eb1[0.25]"
             "D0[0.25] D1[0.25] D0[0.25] D1[0.25] D0[0.25] D1[0.25] D0[0.25] D1[0.25]"
             "G1[0.25] Bb1[0.25] (0.25) G1[0.25] (0.5) C2[0.25] (0.25)"
-            "G1[0.25] Bb1[0.25] (0.25) A1[0.25] (1)"
+            "G1[0.25] Bb1[0.25] (0.25) A1[0.25] (0.75)"
             "{G1, D2, G2}[4] {Eb1, Bb1, Eb2}[4] {F1, C2, F2}[4]";
 
     MELODY right_hand(input_right_hand_melody);
 
     MELODY left_hand(input_left_hand_melody);
 
-    /*right_hand.Melody_Octava_Down();
-    left_hand.Melody_Octava_Down();*/
-
-    // left_hand.Play_Melody(2);
-    // right_hand.Play_Melody(2);
-
     Play_Both_Hands(right_hand, left_hand, 2);
 }
 
 int main() {
-    Build_notes();
     solve();
     return 0;
 }
