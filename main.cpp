@@ -557,6 +557,7 @@ void solve() {
 }
 
 int main() {
+    int a = 3;
     solve();
     return 0;
 }
